@@ -19,3 +19,4 @@ products_ids = {
 kit_body = {
 "name": "X"
 }
+

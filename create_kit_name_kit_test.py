@@ -2,15 +2,13 @@
 import sender_stand_request
 # Импортируем модуль data, в котором определены данные, необходимые для HTTP-запросов.
 import data
-from sender_stand_request import user_token
 
 
-def get_kit_body(name, user_token):
+def get_kit_body(name):
     # Копируется словарь с телом запроса из файла data
     current_body = data.kit_body.copy()
     # Изменение значения в поле name
     current_body["name"] = name
-    current_body["user_token"] = user_token
     # Возвращается новый словарь с нужным значением name
     return current_body
 
@@ -19,20 +17,30 @@ def get_kit_body(name, user_token):
 def positive_assert(name):
     # В переменную kit_body сохраняется обновлённое тело запроса
     kit_body = get_kit_body(name)
+    # Получаем токен пользователя
+    user_token = sender_stand_request.post_new_user(data.user_body).json()["authToken"]
     # В переменную kit_response сохраняется результат запроса на создание набора:
-    kit_response = sender_stand_request.post_new_client_kit(kit_body,user_token)
+    kit_response = sender_stand_request.post_new_client_kit(kit_body, user_token)
     # Проверяется, что код ответа равен 201
     assert kit_response.status_code == 201
-    # Проверяется, что в ответе есть поле authToken и оно не пустое
-    assert kit_response.json()["authToken"] != ""
+    response_json = kit_response.json()
+    if "user" in response_json:
+        assert response_json["user"] != "", "user в ответе пустой"
+        if "authToken" in response_json["user"]:
+            assert response_json["user"]["authToken"] != "", "authToken внутри user пустой"
+        else:
+            assert False, "authToken отсутствует внутри user"
+    else:
+        assert False, "user отсутствует в ответе"
 
 # Функция для негативной проверки
 def negative_assert_symbol(name):
 
     kit_body = get_kit_body(name)
-
+    # Получаем токен пользователя
+    user_token = sender_stand_request.post_new_user(data.user_body).json()["authToken"]
     # В переменную response сохраняется результат запроса
-    response = sender_stand_request.post_new_client_kit(kit_body)
+    response = sender_stand_request.post_new_client_kit(kit_body, user_token)
 
     # Проверка, что код ответа равен 400
     assert response.status_code == 400
@@ -74,7 +82,7 @@ def test_7_name_has_special_symbol_get_success_response():
     positive_assert('"№%@",')
 
 # Тест 8. Разрешены пробелы
-def test_8_space_in_name_get_error_response():
+def test_8_space_in_name_get_success_response():
     positive_assert("Человек и КО")
 
 # Тест 9. Разрешены цифры
@@ -84,8 +92,9 @@ def test_9_name_has_number_get_success_response():
 # Функция для негативной проверки
     # В ответе ошибка: "Не все необходимые параметры были переданы"
 def negative_assert_no_name(kit_body):
+    user_token = sender_stand_request.post_new_user(data.user_body).json()["authToken"]
         # В переменную response сохрани результат вызова функции
-    response = sender_stand_request.post_new_client_kit(kit_body)
+    response = sender_stand_request.post_new_client_kit(kit_body,user_token)
 
         # Проверь, что код ответа — 400
     assert response.status_code == 400
@@ -110,8 +119,10 @@ def test_10_no_name_get_error_response():
 def test_11_name_has_number_type_get_error_response():
     # В переменную kit_body сохраняется обновлённое тело запроса
     kit_body = get_kit_body(123)
+    # Получаем токен пользователя
+    user_token = sender_stand_request.post_new_user(data.user_body).json()["authToken"]
     # В переменную response сохраняется результат запроса на создание набора:
-    response = sender_stand_request.post_new_client_kit(kit_body)
+    response = sender_stand_request.post_new_client_kit(kit_body, user_token)
 
     # Проверка кода ответа
     assert response.status_code == 400
